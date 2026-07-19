@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# Create+ Server Builder v2
+# Modrinth Modpack Server Builder
 #
-# Builds a dedicated NeoForge server from a Modrinth .mrpack and can
-# automatically retry after removing suspected client-side mods.
+# Builds a dedicated NeoForge server from a Modrinth modpack source.
 #
 
 set -euo pipefail
@@ -41,13 +40,14 @@ trap 'error "Unexpected error on line $LINENO."' ERR
 # Configuration
 ################################################################################
 
-PROJECT_SLUG="create_plus"
+PROJECT_SLUG=""
 VERSION="latest"
 MODE="build"
 WORKDIR="$PWD/work"
 OUTPUT="$PWD/server"
 MRPACK=""
 INDEX=""
+SOURCE_INPUT=""
 
 
 ################################################################################
@@ -56,7 +56,12 @@ INDEX=""
 
 usage() {
     cat <<EOF2
-Usage: ./createplus-server.sh [--version VERSION]
+Usage: ./create-modrinth-server.sh <modpack-url|slug|.mrpack-file> [--version VERSION]
+
+Examples:
+  ./create-modrinth-server.sh https://modrinth.com/modpack/example-mod
+  ./create-modrinth-server.sh example-mod
+  ./create-modrinth-server.sh ./example-mod.mrpack
 
 Options:
   --version VERSION  Resolve a specific Modrinth version.
@@ -76,11 +81,16 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            VERSION="$1"
+            if [[ -n "$SOURCE_INPUT" ]]; then
+                error "Only one modpack source may be provided."
+            fi
+            SOURCE_INPUT="$1"
             shift
             ;;
     esac
 done
+
+[[ -n "$SOURCE_INPUT" ]] || error "A Modrinth URL, slug, or .mrpack file must be provided."
 
 
 ################################################################################
@@ -89,7 +99,7 @@ done
 
 echo
 echo "======================================================="
-echo "          Create+ 6 Server Builder"
+echo "          Modrinth Modpack Server Builder"
 echo "======================================================="
 echo
 
@@ -100,20 +110,39 @@ echo
 
 download_pack() {
     echo
-    echo "Resolving Modrinth version..."
+    echo "Preparing modpack input..."
 
-    VERSION=$(resolve_version "$PROJECT_SLUG" "$VERSION")
+    if [[ -n "$SOURCE_INPUT" ]]; then
+        if [[ -f "$SOURCE_INPUT" ]] && [[ "$SOURCE_INPUT" == *.mrpack ]]; then
+            MRPACK="$SOURCE_INPUT"
+            echo "Using local .mrpack file: $MRPACK"
+        elif [[ "$SOURCE_INPUT" =~ ^https?:// ]]; then
+            PROJECT_SLUG=$(slug_from_modrinth_url "$SOURCE_INPUT")
+            [[ -n "$PROJECT_SLUG" ]] || error "Could not determine Modrinth project slug from URL: $SOURCE_INPUT"
+            echo "Resolved Modrinth project: $PROJECT_SLUG"
+        else
+            PROJECT_SLUG="$SOURCE_INPUT"
+            echo "Using Modrinth project slug: $PROJECT_SLUG"
+        fi
+    fi
 
-    echo
-    echo "Using version:"
-    echo "$VERSION"
-    echo
+    if [[ -z "$MRPACK" ]]; then
+        echo
+        echo "Resolving Modrinth version..."
 
-    echo "Downloading Modrinth modpack..."
+        VERSION=$(resolve_version "$PROJECT_SLUG" "$VERSION")
 
-    MRPACK="$WORKDIR/modpack.mrpack"
+        echo
+        echo "Using version:"
+        echo "$VERSION"
+        echo
 
-    download_mrpack "$PROJECT_SLUG" "$VERSION" "$MRPACK"
+        echo "Downloading Modrinth modpack..."
+
+        MRPACK="$WORKDIR/modpack.mrpack"
+
+        download_mrpack "$PROJECT_SLUG" "$VERSION" "$MRPACK"
+    fi
 
     echo
     echo "Extracting modpack..."
@@ -127,6 +156,8 @@ download_pack() {
     echo
 
     show_summary "$INDEX"
+
+    assert_neoforge "$INDEX"
 }
 
 install_loader() {
@@ -177,7 +208,7 @@ run_build() {
 
     echo
     echo "======================================================="
-    echo "Create+ server successfully created."
+    echo "Modpack server successfully created."
     echo
     echo "Location:"
     echo

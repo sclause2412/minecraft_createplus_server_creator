@@ -1,16 +1,18 @@
-# Create+ Server Builder
+# Modrinth Modpack Server Builder
 
-A small Bash-based builder for creating a dedicated NeoForge server from a Create+ Modrinth pack.
+A small Bash-based builder for creating a dedicated NeoForge server from a Modrinth modpack source.
 
-This project is completely (=100%) built by AI (Github Copilot, ChatGPT), so please forgive if their is some strange behavior.
+This project is completely (=100%) built by AI (GitHub Copilot, ChatGPT), so please forgive if there is some strange behavior.
 
 ## Overview
 
-This project downloads a Create+ modpack, installs NeoForge, downloads the required mods, prepares the server files, and generates startup scripts that use the detected Java runtime.
+This project accepts a Modrinth modpack URL, a project slug, or a local `.mrpack` file and builds a dedicated NeoForge server from it. It downloads the modpack, checks that the pack uses NeoForge, installs NeoForge, downloads the required mods, prepares the server files, and generates startup scripts that use the detected Java runtime.
 
 ## Features
 
+- Accepts a Modrinth modpack URL, slug, or local `.mrpack` file
 - Downloads the requested Modrinth modpack version
+- Verifies that the modpack uses NeoForge
 - Installs NeoForge for the target Minecraft version
 - Downloads mods into the server tree
 - Copies supported overrides
@@ -23,27 +25,29 @@ This project downloads a Create+ modpack, installs NeoForge, downloads the requi
 - curl
 - jq
 - unzip
-- Java (correct version for server will be detected)
+- Java 21
 
 ## Usage
 
-Run the builder:
+Run the builder with one of the supported input formats:
 
 ```bash
-./createplus-server.sh --version <version>
+./create-modrinth-server.sh https://modrinth.com/modpack/example-mod
+./create-modrinth-server.sh example-mod
+./create-modrinth-server.sh ./example-mod.mrpack
 ```
 
-Example:
+Optional version selection:
 
 ```bash
-./createplus-server.sh --version latest
+./create-modrinth-server.sh example-mod --version latest
 ```
 
 The generated server is placed in the `server/` directory.
 
 ## Project Structure
 
-- `createplus-server.sh` - main entry point
+- `create-modrinth-server.sh` - main entry point
 - `lib/` - helper scripts for downloads, Java detection, NeoForge setup, server preparation, and filters
 - `server/` - generated server output
 - `cache/` - reusable download cache

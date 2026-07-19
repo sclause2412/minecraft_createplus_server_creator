@@ -14,6 +14,35 @@ modrinth_versions() {
 }
 
 ################################################################################
+# Resolve project slug from Modrinth URL
+################################################################################
+
+slug_from_modrinth_url() {
+
+    local input="$1"
+    local slug=""
+
+    slug=$(printf '%s' "$input" | awk -F'/' '
+        {
+            for (i = 1; i <= NF; i++) {
+                if ($i == "modpack" || $i == "mod") {
+                    if (( i + 1 <= NF )) {
+                        print $(i + 1)
+                        exit 0
+                    }
+                }
+            }
+        }
+    ')
+
+    slug=$(printf '%s' "$slug" | sed 's/[?#].*$//')
+    slug=$(printf '%s' "$slug" | tr -d '[:space:]')
+
+    echo "$slug"
+
+}
+
+################################################################################
 # Resolve version
 ################################################################################
 
@@ -202,12 +231,20 @@ copy_overrides() {
 
 assert_neoforge() {
 
+    local index="$1"
     local loader
 
-    loader=$(loader_name "$1")
+    loader=$(loader_name "$index")
 
-    [[ "$loader" == "neoforge" ]] || \
-        error "This modpack does not use NeoForge."
+    if [[ "$loader" != "neoforge" ]]; then
+        echo
+        echo "Unsupported loader detected: $loader"
+        echo
+        echo "This builder currently supports NeoForge-based modpacks only."
+        echo "Please choose a modpack that uses NeoForge or use a compatible source."
+        echo
+        exit 1
+    fi
 
 }
 
